@@ -60,6 +60,7 @@ type Dialer struct {
 	// Dialer establishes the TCP connection. Defaults to net.Dialer.
 	Dialer *net.Dialer
 
+	UseUserSpecificReceiveBufferSize bool
 	// ClientACK defines the connection parameters requested by the client.
 	// Defaults to DefaultClientACK.
 	ClientACK *Acknowledge
@@ -87,7 +88,7 @@ func (d *Dialer) Dial(ctx context.Context, endpoint string) (*Conn, error) {
 		c.Close()
 		return nil, err
 	}
-
+	conn.useUserSpecificReceiveBufferSize = d.UseUserSpecificReceiveBufferSize
 	debug.Printf("conn %d: start HEL/ACK handshake", conn.id)
 	if err := conn.Handshake(endpoint); err != nil {
 		debug.Printf("conn %d: HEL/ACK handshake failed: %s", conn.id, err)
@@ -170,10 +171,10 @@ func (l *Listener) Endpoint() string {
 
 type Conn struct {
 	*net.TCPConn
-	id  uint32
-	ack *Acknowledge
-
-	closeOnce sync.Once
+	id                               uint32
+	ack                              *Acknowledge
+	useUserSpecificReceiveBufferSize bool
+	closeOnce                        sync.Once
 }
 
 func NewConn(c *net.TCPConn, ack *Acknowledge) (*Conn, error) {
@@ -226,7 +227,6 @@ func (c *Conn) Handshake(endpoint string) error {
 		MaxChunkCount:  c.ack.MaxChunkCount,
 		EndpointURL:    endpoint,
 	}
-
 	if err := c.Send("HELF", hel); err != nil {
 		return err
 	}
@@ -243,6 +243,7 @@ func (c *Conn) Handshake(endpoint string) error {
 		if _, err := ack.Decode(b[hdrlen:]); err != nil {
 			return errors.Errorf("uacp: decode ACK failed: %s", err)
 		}
+
 		if ack.Version != 0 {
 			return errors.Errorf("uacp: invalid version %d", ack.Version)
 		}
@@ -254,6 +255,11 @@ func (c *Conn) Handshake(endpoint string) error {
 			ack.MaxMessageSize = DefaultMaxMessageSize
 			debug.Printf("conn %d: server has no message size limit. Using %d", c.id, ack.MaxMessageSize)
 		}
+		// this mean user didn't set any values so we can safely accepts what server ack
+		if c.useUserSpecificReceiveBufferSize {
+			ack.ReceiveBufSize = c.ack.ReceiveBufSize
+		}
+
 		c.ack = ack
 		debug.Printf("conn %d: recv %#v", c.id, ack)
 		return nil

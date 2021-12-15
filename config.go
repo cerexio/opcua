@@ -496,6 +496,14 @@ func MaxChunkCount(n uint32) Option {
 	}
 }
 
+//UserSpecificReceiveBufferSize tell the library to use user specific receive buffer size instead server acknowledge one
+func UserSpecificReceiveBufferSize(b bool) Option {
+	return func(cfg *Config) {
+		initDialer(cfg)
+		cfg.dialer.UseUserSpecificReceiveBufferSize = b
+	}
+}
+
 // ReceiveBufferSize sets the receive buffer size for the UACP handshake.
 func ReceiveBufferSize(n uint32) Option {
 	return func(cfg *Config) {
@@ -514,7 +522,7 @@ func SendBufferSize(n uint32) Option {
 
 func initDialer(cfg *Config) {
 	if cfg.dialer == nil {
-		cfg.dialer = &uacp.Dialer{}
+		cfg.dialer = &uacp.Dialer{UseUserSpecificReceiveBufferSize: false}
 	}
 	if cfg.dialer.Dialer == nil {
 		cfg.dialer.Dialer = &net.Dialer{}
