@@ -1,4 +1,4 @@
-module github.com/cerexio/opcua
+module github.com/gopcua/opcua
 
 go 1.12
 
