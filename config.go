@@ -504,6 +504,14 @@ func UserSpecificReceiveBufferSize(b bool) Option {
 	}
 }
 
+//UserSpecificMaxMessageSize tell the library to use user specific maximum message size instead server acknowledge one
+func UserSpecificMaxMessageSize(b bool) Option {
+	return func(cfg *Config) {
+		initDialer(cfg)
+		cfg.dialer.UseUserSpecificMaxMessageSize = b
+	}
+}
+
 // ReceiveBufferSize sets the receive buffer size for the UACP handshake.
 func ReceiveBufferSize(n uint32) Option {
 	return func(cfg *Config) {

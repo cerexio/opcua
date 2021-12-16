@@ -61,6 +61,7 @@ type Dialer struct {
 	Dialer *net.Dialer
 
 	UseUserSpecificReceiveBufferSize bool
+	UseUserSpecificMaxMessageSize    bool
 	// ClientACK defines the connection parameters requested by the client.
 	// Defaults to DefaultClientACK.
 	ClientACK *Acknowledge
@@ -89,6 +90,7 @@ func (d *Dialer) Dial(ctx context.Context, endpoint string) (*Conn, error) {
 		return nil, err
 	}
 	conn.useUserSpecificReceiveBufferSize = d.UseUserSpecificReceiveBufferSize
+	conn.useUserSpecificMaxMessageSize = d.UseUserSpecificMaxMessageSize
 	debug.Printf("conn %d: start HEL/ACK handshake", conn.id)
 	if err := conn.Handshake(endpoint); err != nil {
 		debug.Printf("conn %d: HEL/ACK handshake failed: %s", conn.id, err)
@@ -174,6 +176,7 @@ type Conn struct {
 	id                               uint32
 	ack                              *Acknowledge
 	useUserSpecificReceiveBufferSize bool
+	useUserSpecificMaxMessageSize    bool
 	closeOnce                        sync.Once
 }
 
@@ -258,6 +261,10 @@ func (c *Conn) Handshake(endpoint string) error {
 		// this mean user didn't set any values so we can safely accepts what server ack
 		if c.useUserSpecificReceiveBufferSize {
 			ack.ReceiveBufSize = c.ack.ReceiveBufSize
+		}
+		// this mean user didn't set any values so we can safely accepts what server ack
+		if c.useUserSpecificMaxMessageSize {
+			ack.MaxMessageSize = c.ack.MaxMessageSize
 		}
 
 		c.ack = ack
